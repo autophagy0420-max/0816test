@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ 청소당번 랜덤 추첨기</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Canvas Confetti (축하 효과) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        * {
+            font-family: 'Pretendard', sans-serif;
+        }
+        .bg-gradient-custom {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .card-slot {
+            perspective: 1000px;
+        }
+        .number-card-inner {
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+        }
+        .number-card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            border-radius: 1rem;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .glow-effect {
+            box-shadow: 0 0 25px rgba(129, 140, 248, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gradient-custom min-h-screen text-white flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header Section -->
+    <header class="pt-8 pb-4 text-center container">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-sm font-medium mb-3 backdrop-blur-md">
+            <i class="fa-solid fa-sparkles text-amber-400"></i> 학급 관리 스마트 툴
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 via-sky-300 to-pink-300">
+            🧹 오늘의 청소당번 추첨
+        </h1>
+        <p class="text-slate-400 text-sm md:text-base mt-2 max-w-lg mx-auto">
+            공정하고 흥미진진한 랜덤 추첨 시스템! 당번으로 선발될 학생을 뽑아보세요.
+        </p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container my-auto py-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Settings Bar -->
+            <div class="glass-card rounded-2xl p-4 md:p-6 mb-8 shadow-2xl">
+                <div class="row g-3 align-items-center">
+                    <div class="col-12 col-md-4">
+                        <label for="totalStudents" class="form-label text-slate-300 font-semibold mb-1">
+                            <i class="fa-solid fa-users text-indigo-400 me-2"></i>전체 학생 수
+                        </label>
+                        <div class="input-group">
+                            <input type="number" id="totalStudents" class="form-control bg-slate-800/80 border-slate-600 text-white font-bold focus:border-indigo-500" value="30" min="5" max="60">
+                            <span class="input-group-text bg-slate-700 border-slate-600 text-slate-300">명</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="selectCount" class="form-label text-slate-300 font-semibold mb-1">
+                            <i class="fa-solid fa-user-check text-pink-400 me-2"></i>뽑을 당번 수
+                        </label>
+                        <div class="input-group">
+                            <input type="number" id="selectCount" class="form-control bg-slate-800/80 border-slate-600 text-white font-bold focus:border-indigo-500" value="5" min="1" max="10">
+                            <span class="input-group-text bg-slate-700 border-slate-600 text-slate-300">명</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 flex items-end">
+                        <button type="button" onclick="showHistory()" class="btn btn-outline-light w-full py-2.5 font-semibold rounded-xl border-slate-500 hover:bg-slate-700/50 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> 추첨 기록 보기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards Container -->
+            <div id="cardsContainer" class="row row-cols-2 row-cols-sm-3 row-cols-md-5 g-3 mb-8 justify-content-center">
+                <!-- 자바스크립트로 동적 카드 생성 -->
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <button id="drawBtn" onclick="startDrawProcess()" class="btn btn-primary btn-lg px-8 py-3 rounded-xl font-bold shadow-lg transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 border-0 flex items-center gap-2 text-lg">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 추첨 시작하기
+                </button>
+                <button id="resetBtn" onclick="confirmReset()" class="btn btn-dark btn-lg px-6 py-3 rounded-xl font-semibold border-slate-600 hover:bg-slate-800 text-slate-300 flex items-center gap-2 text-lg">
+                    <i class="fa-solid fa-rotate-right"></i> 초기화
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-4 text-center text-slate-500 text-xs">
+        <p>© 스마트 학급 관리 시스템 · Crafted with Bootstrap 5, Tailwind CSS & SweetAlert2</p>
+    </footer>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let isDrawing = false;
+        let historyLogs = [];
+
+        // 카드 슬롯 초기화 함수
+        function initCards() {
+            const container = document.getElementById('cardsContainer');
+            const selectCount = parseInt(document.getElementById('selectCount').value) || 5;
+            container.innerHTML = '';
+
+            for (let i = 0; i < selectCount; i++) {
+                const cardHTML = `
+                    <div class="col card-slot">
+                        <div class="number-card-inner relative w-full h-36 md:h-44 shadow-xl" id="card-${i}">
+                            <!-- 카드 앞면 (닫힌 상태) -->
+                            <div class="card-front absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 flex flex-col items-center justify-center p-3 text-center">
+                                <div class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center mb-2 font-bold text-sm">
+                                    #${i + 1}
+                                </div>
+                                <i class="fa-solid fa-lock text-slate-500 text-2xl mb-1"></i>
+                                <span class="text-xs text-slate-400">대기 중</span>
+                            </div>
+                            <!-- 카드 뒷면 (당첨 번호 공개) -->
+                            <div class="card-back absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 border border-indigo-400 flex flex-col items-center justify-center p-3 text-center glow-effect">
+                                <span class="text-xs uppercase tracking-wider text-indigo-100 font-semibold mb-1">당첨 번호</span>
+                                <span class="card-number text-3xl md:text-4xl font-extrabold text-white tracking-tight drop-shadow-md">-</span>
+                                <span class="badge bg-white/20 backdrop-blur-md text-white text-[10px] mt-2 px-2 py-1 rounded-full">
+                                    <i class="fa-solid fa-broom me-1"></i>청소당번
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHTML);
+            }
+        }
+
+        // 입력값 검증
+        function validateInputs() {
+            const total = parseInt(document.getElementById('totalStudents').value);
+            const count = parseInt(document.getElementById('selectCount').value);
+
+            if (isNaN(total) || total < 1) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '입력 오류',
+                    text: '올바른 전체 학생 수를 입력하세요.',
+                    background: '#1e293b',
+                    color: '#fff'
+                });
+                return false;
+            }
+            if (isNaN(count) || count < 1) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '입력 오류',
+                    text: '최소 1명 이상의 당번을 지정해야 합니다.',
+                    background: '#1e293b',
+                    color: '#fff'
+                });
+                return false;
+            }
+            if (count > total) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '인원 설정 오류',
+                    text: `뽑을 인원(${count}명)이 전체 학생 수(${total}명)보다 많을 수 없습니다!`,
+                    background: '#1e293b',
+                    color: '#fff',
+                    confirmButtonColor: '#6366f1'
+                });
+                return false;
+            }
+            return true;
+        }
+
+        // 추첨 프로세스 (SweetAlert2 + Card Flip Animation)
+        async function startDrawProcess() {
+            if (isDrawing) return;
+            if (!validateInputs()) return;
+
+            const totalStudents = parseInt(document.getElementById('totalStudents').value);
+            const selectCount = parseInt(document.getElementById('selectCount').value);
+
+            initCards();
+
+            // 1. 추첨 확인 모달
+            const result = await Swal.fire({
+                title: '🎉 추첨을 시작할까요?',
+                text: `1번부터 ${totalStudents}번 학생 중 무작위로 ${selectCount}명을 추첨합니다.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#6366f1',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '네, 추첨합니다!',
+                cancelButtonText: '취소',
+                background: '#1e293b',
+                color: '#fff',
+                customClass: {
+                    popup: 'border border-slate-700 rounded-2xl shadow-2xl'
+                }
+            });
+
+            if (!result.isConfirmed) return;
+
+            isDrawing = true;
+            document.getElementById('drawBtn').disabled = true;
+            document.getElementById('resetBtn').disabled = true;
+
+            // 중복 없는 랜덤 번호 생성 (피셔-예이츠 셔플)
+            const pool = Array.from({ length: totalStudents }, (_, i) => i + 1);
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            const selectedNumbers = pool.slice(0, selectCount).sort((a, b) => a - b);
+
+            // 2. 롤링 및 로딩 안내 모달
+            Swal.fire({
+                title: '🎲 당번을 추첨 중입니다...',
+                html: '운명의 주인공은 과연 누구일까요?',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                background: '#1e293b',
+                color: '#fff',
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            Swal.close();
+
+            // 3. 카드 순차 뒤집기 애니메이션
+            for (let i = 0; i < selectCount; i++) {
+                const cardEl = document.getElementById(`card-${i}`);
+                const numberEl = cardEl.querySelector('.card-number');
+                
+                numberEl.textContent = `${selectedNumbers[i]}번`;
+                cardEl.classList.add('is-flipped');
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+
+            // 4. 폭죽 애니메이션
+            confetti({
+                particleCount: 120,
+                spread: 80,
+                origin: { y: 0.6 }
+            });
+
+            // 기록 저장
+            const timeStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            historyLogs.unshift({
+                time: timeStr,
+                numbers: selectedNumbers
+            });
+
+            // 5. 최종 결과 알림 모달
+            const resultListHTML = selectedNumbers.map(num => 
+                `<span class="inline-block bg-indigo-600 text-white font-extrabold text-lg px-3 py-1.5 rounded-lg m-1 shadow-md border border-indigo-400">${num}번</span>`
+            ).join('');
+
+            Swal.fire({
+                title: '🎊 축하합니다! (당선 완료)',
+                html: `
+                    <p class="text-slate-300 mb-3">오늘의 청소당번으로 아래 학생들이 선정되었습니다.</p>
+                    <div class="my-4 p-3 bg-slate-900/80 rounded-xl border border-slate-700">${resultListHTML}</div>
+                    <p class="text-xs text-slate-400">깨끗한 교실을 만들어주세요! 🧹✨</p>
+                `,
+                icon: 'success',
+                confirmButtonText: '확인',
+                confirmButtonColor: '#10b981',
+                background: '#1e293b',
+                color: '#fff',
+                customClass: {
+                    popup: 'border border-slate-700 rounded-2xl'
+                }
+            });
+
+            isDrawing = false;
+            document.getElementById('drawBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = false;
+        }
+
+        // 초기화 확인
+        async function confirmReset() {
+            if (isDrawing) return;
+
+            const result = await Swal.fire({
+                title: '초기화하시겠습니까?',
+                text: '추첨 카드 및 결과 화면이 초기 상태로 돌아갑니다.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: '초기화',
+                cancelButtonText: '취소',
+                background: '#1e293b',
+                color: '#fff'
+            });
+
+            if (result.isConfirmed) {
+                initCards();
+                Swal.fire({
+                    title: '초기화 완료',
+                    text: '새로운 추첨을 시작할 준비가 되었습니다.',
+                    icon: 'info',
+                    timer: 1200,
+                    showConfirmButton: false,
+                    background: '#1e293b',
+                    color: '#fff'
+                });
+            }
+        }
+
+        // 추첨 내역 보기
+        function showHistory() {
+            if (historyLogs.length === 0) {
+                Swal.fire({
+                    title: '추첨 기록 없음',
+                    text: '아직 진행된 추첨 기록이 없습니다.',
+                    icon: 'info',
+                    confirmButtonColor: '#6366f1',
+                    background: '#1e293b',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            const historyHTML = historyLogs.map((log, idx) => `
+                <div class="text-start p-3 mb-2 rounded-xl bg-slate-900/80 border border-slate-700/80 flex flex-col gap-1">
+                    <div class="text-xs font-semibold text-indigo-400 flex justify-between">
+                        <span>회차 #${historyLogs.length - idx}</span>
+                        <span class="text-slate-400">${log.time}</span>
+                    </div>
+                    <div class="mt-1 flex flex-wrap gap-1">
+                        ${log.numbers.map(n => `<span class="bg-slate-800 text-indigo-200 border border-indigo-500/30 text-xs font-bold px-2 py-0.5 rounded">${n}번</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            Swal.fire({
+                title: '📜 최근 추첨 기록',
+                html: `<div class="max-h-60 overflow-y-auto pe-1 my-2">${historyHTML}</div>`,
+                showCloseButton: true,
+                confirmButtonText: '닫기',
+                confirmButtonColor: '#6366f1',
+                background: '#1e293b',
+                color: '#fff',
+                customClass: {
+                    popup: 'border border-slate-700 rounded-2xl'
+                }
+            });
+        }
+
+        // 입력 값 변경 이벤트 감지
+        document.getElementById('selectCount').addEventListener('change', initCards);
+        document.getElementById('selectCount').addEventListener('keyup', initCards);
+
+        // 페이지 로드 시 카드 초기화
+        window.addEventListener('DOMContentLoaded', initCards);
+    </script>
+</body>
+</html>
